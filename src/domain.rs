@@ -41,6 +41,18 @@ pub struct MessageUpdate {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MessageCreate {
+    pub channel_id: String,
+    pub author_id: String,
+    pub content: String,
+    pub reply_to: Option<Uuid>,
+    #[serde(default)]
+    pub attachments: Vec<Attachment>,
+    #[serde(default)]
+    pub notify: Vec<NotifyEntry>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchResult {
     #[serde(rename = "type")]
     pub r#type: String, // "message" | "document"

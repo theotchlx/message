@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use dotenv::dotenv;
 
 use actix_web::{App, HttpServer};
 
@@ -8,6 +9,8 @@ use message::usecases::MessageService;
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
+    dotenv().ok();
+
     // Initialize Mongo-backed repository from env MONGO_URL
     let repo_impl = match MongoRepo::from_env().await {
         Ok(r) => r,

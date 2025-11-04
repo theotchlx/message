@@ -74,6 +74,25 @@ async fn list_messages(
     }
 }
 
+#[post("/messages/{channel}")]
+async fn post_message(
+    path: web::Path<String>,
+    body: web::Json<MessageCreate>,
+    data: web::Data<AppState>,
+) -> impl Responder {
+    let channel = path.into_inner();
+    let mut msg = body.into_inner();
+    msg.channel_id = channel;
+    match data.svc.post_message(msg).await {
+        Ok(()) => HttpResponse::Created().finish(),
+        Err(RepositoryError::Forbidden) => HttpResponse::Forbidden().json(ApiError {
+            error: Some("forbidden".into()),
+            code: Some("forbidden".into()),
+        }),
+        Err(_) => HttpResponse::InternalServerError().finish(),
+    }
+}
+
 #[patch("/messages/{id}")]
 async fn patch_message(
     path: web::Path<String>,
@@ -205,6 +224,7 @@ pub fn configure(cfg: &mut web::ServiceConfig, svc: MessageService) {
     cfg.app_data(web::Data::new(state))
         .service(get_message)
         .service(list_messages)
+        .service(post_message)
         .service(patch_message)
         .service(delete_message)
         .service(pin_message)

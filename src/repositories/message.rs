@@ -1,3 +1,4 @@
+use crate::MessageCreate;
 use crate::domain::{Message, MessageUpdate, SearchResult};
 use crate::ports::{MessageRepository, RepoResult, RepositoryError};
 use async_trait::async_trait;
@@ -100,6 +101,26 @@ impl MessageRepository for MongoRepo {
         };
 
         Ok((items, next_before))
+    }
+
+    async fn post(&self, message: MessageCreate) -> RepoResult<()> {
+        let message = Message {
+            id: Uuid::new_v4(),
+            channel_id: message.channel_id,
+            author_id: message.author_id,
+            content: message.content,
+            reply_to: message.reply_to,
+            attachments: message.attachments,
+            notify: message.notify,
+            pinned: false,
+            created_at: Utc::now(),
+            edited_at: None,
+            deleted_at: None,
+        };
+        match self.col.insert_one(message, None).await {
+            Ok(_) => Ok(()),
+            Err(e) => Err(RepositoryError::Other(e.to_string())),
+        }
     }
 
     async fn update(&self, id: Uuid, update: MessageUpdate) -> RepoResult<Message> {

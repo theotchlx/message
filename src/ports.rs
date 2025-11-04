@@ -34,6 +34,8 @@ pub trait MessageRepository: Send + Sync + 'static {
 
     async fn pin(&self, id: Uuid) -> RepoResult<()>;
 
+    async fn post(&self, message: MessageCreate) -> RepoResult<()>;
+
     async fn list_pins(
         &self,
         channel: &str,

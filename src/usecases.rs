@@ -38,6 +38,10 @@ impl MessageService {
         self.repo.pin(id).await
     }
 
+    pub async fn post_message(&self, message: MessageCreate) -> RepoResult<()> {
+        self.repo.post(message).await
+    }
+
     pub async fn list_pins(
         &self,
         channel: &str,
