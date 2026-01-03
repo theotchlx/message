@@ -1,57 +1,78 @@
-# Messaging Service
+# Messages service
 
-This repository contains a small Rust-based messaging service. The project includes an OpenAPI specification (`swagger.yaml`) and can be run locally using Docker Compose and Cargo.
+The Communities service is designed to facilitate the creation, management, and interaction of user communities within the platform.
+It will handle:
+
+- Messages
+- Members
+- Roles
+- Channels
 
 ## Prerequisites
 
-- Docker and Docker Compose
-- Rust toolchain (cargo)
-- A copy of `.env.template` configured as needed
+- [Docker](https://www.docker.com/get-started/)
+- Rust and Cargo
+- [sqlx-cli](https://crates.io/crates/sqlx-cli)
 
-## Quick start
+## Quickstart
 
-1. Copy the example environment file:
+Launch postgres:
 
-   ```bash
-   cp .env.template .env
-   ```
+```bash
+docker compose up -d mongo 
+```
 
-2. Start required services using Docker Compose (runs in detached mode):
+Create the .env file to let the Mongo client know how to connect to the database:
 
-   ```bash
-   docker compose up -d
-   ```
+```bash
+cp .env.example .env
+```
 
-   This will start any configured services such as MongoDB and mongo-express.
+Launch the API server:
 
-3. Access mongo-express in your browser:
+```bash
+cargo run --bin api
+```
 
-   http://localhost:8081
+The application runs two servers on separate ports:
 
-4. Run the application with Cargo:
+- **Health server** on `http://localhost:9090` - Isolated health checks (prevents DDOS on API)
+  - `GET /health` - Health check with database connectivity
+- **API server** on `http://localhost:3001` - Main application endpoints
+  - Future business logic endpoints will be added here
 
-   ```bash
-   cargo run
-   ```
+This dual-server architecture provides DDOS protection by isolating health checks from API traffic.
 
-   The server will start according to the configuration in the project. See `swagger.yaml` for the API specification.
+## Configuration
 
-## API documentation
+You can pass down some configuration using `--help`:
 
-The OpenAPI specification is provided in `swagger.yaml` at the repository root. You can use it with tools like Swagger UI or Postman to explore the API endpoints.
+```bash
+cargo run --bin api -- --help
+```
 
-## Useful commands
+You can now see all the possible way to configure the service:
 
-- Copy environment template: `cp .env.template .env`
-- Start services: `docker compose up -d`
-- Stop services: `docker compose down`
-- Run the app: `cargo run`
+```bash
+Communities API Server
 
-## Notes
+Usage: api [OPTIONS] --database-password <database_password> --jwt-secret-key <jwt_secret_key>
 
-- Ensure `.env` contains correct credentials and connection strings for the services started by Docker Compose.
-- The repository contains an example OpenAPI spec (`swagger.yaml`) describing the endpoints, request/response models, and security scheme.
+Options:
+      --database-rui <URI>
+          [env: DATABASE_URI=] [default: mongodb://localhost:27017/messages]
+      --database-name <database_name>
+          [env: DATABASE_NAME=] [default: communities]
+      --jwt-secret-key <jwt_secret_key>
+          [env: JWT_SECRET_KEY=a-string-secret-at-least-256-bits-long]
+      --server-api-port <api_port>
+          [env: API_PORT=3001] [default: 8080]
+      --server-health-port <HEALTH_PORT>
+          [env: HEALTH_PORT=9090] [default: 8081]
+  -h, --help
+          Print help
+```
 
-## Contributing
+## Persistence
 
-Please open issues or pull requests for improvements or bug fixes.
+To persist data we use MongoDB.
