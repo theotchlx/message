@@ -14,6 +14,8 @@ use crate::{
         server::{
             ApiError, AppState, middleware::auth::AuthMiddleware,
             middleware::auth::entities::AuthValidator,
+            authorization::SpiceDbAuthz,
+            authorization::SpiceDbConfig as LocalSpiceConfig,
         },
     },
     message_routes,
@@ -39,12 +41,31 @@ impl App {
     pub async fn new(config: Config) -> Result<Self, ApiError> {
         tracing::debug!("Creating repositories...");
         let state: AppState =
-            create_repositories(&config.database.mongo_uri, &config.database.mongo_db_name)
-                .await
-                .map_err(|e| ApiError::StartupError {
-                    msg: format!("Failed to create repositories: {}", e),
-                })?
-                .into();
+            {
+                let repos = create_repositories(&config.database.mongo_uri, &config.database.mongo_db_name)
+                    .await
+                    .map_err(|e| ApiError::StartupError {
+                        msg: format!("Failed to create repositories: {}", e),
+                    })?;
+
+                // Build service from repositories
+                let service: communities_core::application::CommunitiesService = repos.clone().into();
+
+                // Initialize authorization client. If the spicedb feature is enabled
+                // we'll attempt to initialize the SpiceDB-backed client; otherwise use
+                // a permissive dummy implementation.
+                use std::sync::Arc;
+                let authz: Arc<dyn crate::http::server::authorization::Authorization> = {
+                    let cfg = LocalSpiceConfig {
+                        endpoint: config.spicedb.endpoint.clone(),
+                        token: if config.spicedb.token.is_empty() { None } else { Some(config.spicedb.token.clone()) },
+                    };
+                    let client = SpiceDbAuthz::new(cfg).await.map_err(|e| ApiError::StartupError { msg: format!("Failed to init spice db authz: {:?}", e) })?;
+                    Arc::new(client)
+                };
+
+                AppState::new(service, authz)
+            };
         let keycloak_repository = KeycloakAuthRepository::new(
             format!(
                 "{}/realms/{}",
